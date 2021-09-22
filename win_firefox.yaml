@@ -1,0 +1,41 @@
+---
+# tasks file for pkg-install
+- name: Installing firefox exe
+  hosts: all
+  vars:
+     firefox_versions_url : "https://product-details.mozilla.org/1.0/firefox_versions.json"
+  tasks:
+    - name: Get Firefox available versions from Mozilla
+      local_action:
+        module: uri
+        url: '{{ firefox_versions_url }}'
+        return_content: yes
+      register: firefox_available_versions
+
+    - block:
+      - set_fact:
+          firefox_available_version_fact: "{{ firefox_available_versions.json.LATEST_FIREFOX_VERSION }}"
+
+
+    - name: Create directory structure
+      win_file:
+        path: C:\temp\packages
+        state: directory
+      when:
+      - ansible_os_family == 'Windows'
+
+    - name: Download the firefox installer
+      win_get_url:
+        url: "{{ item }}"
+        dest: C:\temp\packages
+      with_items:
+      - https://ftp.mozilla.org/pub/firefox/releases/{{ firefox_available_version_fact }}/win32/en-US/Firefox%20Setup%20{{firefox_available_version_fact}}.exe
+      when:
+      - ansible_os_family == 'Windows'
+
+    - name: Install Firefox
+      win_package:
+        path: C:\temp\packages\Firefox%20Setup%2018.0b5.exe
+        state: present
+      when:
+      - ansible_os_family == 'Windows'
